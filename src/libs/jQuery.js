@@ -9,15 +9,21 @@
 	var window = this;
 	var undefined;
 
+	// 保存window下的jquery $ 变量
+	var _jQuery = window.jQuery;
+	var _$ = window.$;
+
 	var jQuery = function( selector, context ){
 
 		// jquery（）运行后，返回的是jQuery.prototype.init构造函数的实例
 		// jquery().a()  想实现这样，就需要把jquery的原型放到jQuery.prototype.init.prototype上去。即：jQuery.fn.init.prototype = jQuery.fn;
+		// 但是构造出来的对象，类名为init，显然这不是我们想要的
 		return new jQuery.fn.init( selector, context )
 	}
 
 	// jQuery的原型
 	jQuery.fn = jQuery.prototype = {
+		// 选择器分析
 		init:function( selector, context ){
 			
 			// selector为空时，取document
@@ -42,6 +48,28 @@
 			    this.length = elements.length;
 			    return this;
 			}
+		},
+
+		// 空选择器
+		selector: "",
+
+		// 版本号
+		jquery: "1.3.1",
+
+		// 所选择的DOM数目
+		size: function() {
+			return this.length;
+		},
+
+		// 不传参返回一个空数组，或者返回第N个DOM
+		get: function( num ) {
+			return num === undefined ?
+
+				// 创建空数组
+				jQuery.makeArray( this ) :
+
+				// 返回第N个DOM
+				this[ num ];
 		}
 	}
 
@@ -99,8 +127,13 @@
 		// 返回target
 		return target;
 	};
+
 	// 替换原型
 	jQuery.fn.init.prototype = jQuery.fn;
+	// 替换构造函数
+	jQuery.fn.constructor = jQuery;
+
+	// 强行将window对象的$赋值到jQuery对象，这样的话，如果有冲突可以调用noConflict方法，解决冲突
 	window.$ = jQuery;
 
 	// 扩展方法
@@ -114,6 +147,11 @@
 		isArray: function( obj ) {
 			return toString.call(obj) === "[object Array]";
 		},
+		
+		trim: function( text ) {
+			// 去除两侧空格
+			return (text || "").replace( /^\s+|\s+$/g, "" );
+		},
 
 		// each方法，遍历object对象
 		each: function( object, callback, args ) {
@@ -124,13 +162,13 @@
 			if ( args ) {
 				if ( length === undefined ) {
 					for ( name in object ){
-						// 改了一下代码，源码不是这样写的,增加上下文，this对象指向object
-						if ( object.hasOwnProperty(name) && ( callback.apply( object, [object[name], args] ) === false ) )
+						// 改了一下源码，args不能是数组 ps:我觉得我说的有歧义
+						if ( object.hasOwnProperty(name) && ( callback.call( object[ name ], args ) === false ) )
 							break;
 					}
 				} else
 					for ( ; i < length; )
-						if ( callback.apply( object[ i++ ], args ) === false )
+						if ( callback.call( object[ i++ ], args ) === false )
 							break;
 			// 如果未传参
 			} else {
@@ -138,7 +176,7 @@
 				if ( length === undefined ) { 
 					for ( name in object )
 						// 函数返回false就终止遍历
-						if ( object.hasOwnProperty(name) && callback.call( object, name, object[ name ] ) === false )
+						if ( object.hasOwnProperty(name) && callback.call( object[ name ], name, object[ name ] )=== false )
 							break;
 				} else{
 					for ( var value = object[0];
@@ -146,6 +184,29 @@
 				}
 			}
 			return object;
+		},
+
+		// 解决命名空间冲突
+		noConflict: function(deep) {
+			// 判断全局 $ 变量是否等于 jQuery 变量
+			// 如果等于，则重新还原全局变量 $ 为 jQuery 运行之前的变量（存储在内部变量 _$ 中）
+			if (window.$ === jQuery) {
+				// 此时 jQuery 别名 $ 失效
+				window.$ = _$;
+			}
+			// 当开启深度冲突处理并且全局变量 jQuery 等于内部 jQuery，则把全局 jQuery 还原成之前的状况
+			if (deep && window.jQuery === jQuery) {
+				// 如果 deep 为 true，此时 jQuery 失效
+				window.jQuery = _jQuery;
+			}
+
+			// 这里返回的是 jQuery
+			// var $a = $.noConflict(); 
+			return jQuery;
 		}
+
 	});
 })()
+
+
+console.log( $('#status') );
